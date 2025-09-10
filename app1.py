@@ -152,7 +152,7 @@ if uploaded_file is not None:
                         st.metric("Коэффициент асимметрии", f"{skewness:.4f}")
                         st.metric("Коэффициент эксцесса", f"{kurtosis:.4f}")
 
-                # ... остальной код без изменений ...
+
                 with tab2:
                     st.header("Отбраковка грубых ошибок")
 
