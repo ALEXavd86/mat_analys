@@ -122,19 +122,46 @@ if uploaded_file is not None:
                     # Расчет статистик
                     mean = np.mean(data)
                     median = np.median(data)
-
-                    # Правильное определение моды
-                    mode_value, mode_count = find_mode(data)
-                    if isinstance(mode_value, str):
-                        mode_display = mode_value
-                    else:
-                        mode_display = f"{mode_value:.4f} (встречается {mode_count} раз)"
-
-                    variance = np.var(data, ddof=1)  # несмещенная оценка
+                    variance = np.var(data, ddof=1)
                     std_dev = np.std(data, ddof=1)
                     cv = (std_dev / mean) * 100 if mean != 0 else "Не определен"
                     skewness = stats.skew(data)
                     kurtosis = stats.kurtosis(data)
+
+
+                    # Определение моды через модальный интервал
+                    def calculate_mode_from_histogram(data, bins=10):
+                        """Вычисляет моду через модальный интервал"""
+                        # Строим гистограмму для определения интервалов
+                        counts, bin_edges = np.histogram(data, bins=bins)
+
+                        # Находим модальный интервал (интервал с максимальной частотой)
+                        modal_interval_idx = np.argmax(counts)
+                        modal_interval = (bin_edges[modal_interval_idx], bin_edges[modal_interval_idx + 1])
+                        modal_frequency = counts[modal_interval_idx]
+
+                        # Формула для моды в модальном интервале
+                        # Mo = L + (f_m - f_{m-1}) / ((f_m - f_{m-1}) + (f_m - f_{m+1})) * h
+                        L = modal_interval[0]  # Нижняя граница модального интервала
+                        h = modal_interval[1] - modal_interval[0]  # Ширина интервала
+
+                        # Частоты соседних интервалов
+                        f_m = modal_frequency  # Частота модального интервала
+                        f_prev = counts[modal_interval_idx - 1] if modal_interval_idx > 0 else 0
+                        f_next = counts[modal_interval_idx + 1] if modal_interval_idx < len(counts) - 1 else 0
+
+                        # Вычисляем моду
+                        try:
+                            mode_value = L + ((f_m - f_prev) / ((f_m - f_prev) + (f_m - f_next))) * h
+                        except ZeroDivisionError:
+                            # Если все частоты равны, берем середину интервала
+                            mode_value = L + h / 2
+
+                        return mode_value, modal_interval, modal_frequency
+
+
+                    # Вычисляем моду
+                    mode_value, modal_interval, modal_frequency = calculate_mode_from_histogram(data)
 
                     # Отображение результатов
                     col1, col2 = st.columns(2)
@@ -143,7 +170,9 @@ if uploaded_file is not None:
                         st.metric("Количество значений", n)
                         st.metric("Среднее арифметическое", f"{mean:.4f}")
                         st.metric("Медиана", f"{median:.4f}")
-                        st.metric("Мода", mode_display)
+                        st.metric("Мода (приближенная)", f"{mode_value:.4f}")
+                        st.info(f"Модальный интервал: {modal_interval[0]:.2f} - {modal_interval[1]:.2f}")
+                        st.info(f"Частота модального интервала: {modal_frequency}")
 
                     with col2:
                         st.metric("Дисперсия", f"{variance:.4f}")
@@ -229,30 +258,140 @@ if uploaded_file is not None:
                         st.metric("Необходимое количество измерений", f"{int(np.ceil(required_n))}")
 
                 with tab4:
-                    st.header("Гистограмма распределения")
+                    st.header("Гистограмма распределения с модальным интервалом")
 
-                    # Автоматическое определение числа интервалов (правило Стёрджеса)
+                    # Автоматическое определение числа интервалов
                     k = int(1 + 3.322 * np.log10(len(clean_data)))
+                    n_bins = st.slider("Количество интервалов гистограммы", 5, 20, min(k, 12))
 
                     fig, ax = plt.subplots(figsize=(8, 5))
-                    n_bins = st.slider("Количество интервалов гистограммы", 5, 30, min(k, 15))
 
-                    ax.hist(clean_data, bins=n_bins, alpha=0.7, edgecolor='black', density=True)
-                    ax.axvline(mean_clean, color='r', linestyle='--', label=f'Среднее: {mean_clean:.2f}')
-                    ax.axvline(median, color='g', linestyle='--', label=f'Медиана: {median:.2f}')
+                    # Построение гистограммы
+                    counts, bin_edges, patches = ax.hist(clean_data, bins=n_bins, alpha=0.7,
+                                                         edgecolor='black', density=False,
+                                                         color='lightblue')
+
+                    # Находим модальный интервал и вычисляем моду
+                    modal_interval_idx = np.argmax(counts)
+                    modal_interval = (bin_edges[modal_interval_idx], bin_edges[modal_interval_idx + 1])
+                    modal_frequency = counts[modal_interval_idx]
+
+                    # Вычисляем моду по формуле
+                    L = modal_interval[0]  # Нижняя граница модального интервала
+                    h = modal_interval[1] - modal_interval[0]  # Ширина интервала
+
+                    # Частоты соседних интервалов
+                    f_m = modal_frequency
+                    f_prev = counts[modal_interval_idx - 1] if modal_interval_idx > 0 else 0
+                    f_next = counts[modal_interval_idx + 1] if modal_interval_idx < len(counts) - 1 else 0
+
+                    # Вычисляем моду
+                    try:
+                        mode_value = L + ((f_m - f_prev) / ((f_m - f_prev) + (f_m - f_next))) * h
+                    except ZeroDivisionError:
+                        mode_value = L + h / 2  # Середина интервала если все частоты равны
+
+                    # Выделяем модальный интервал цветом
+                    patches[modal_interval_idx].set_facecolor('red')
+                    patches[modal_interval_idx].set_alpha(0.8)
+                    patches[modal_interval_idx].set_edgecolor('darkred')
+                    patches[modal_interval_idx].set_linewidth(2)
+
+                    # Подписываем модальный интервал
+                    ax.annotate(f'МОДАЛЬНЫЙ ИНТЕРВАЛ\nЧастота: {modal_frequency}',
+                                xy=(bin_edges[modal_interval_idx] + h / 2, modal_frequency),
+                                xytext=(0, 25),
+                                textcoords='offset points',
+                                ha='center', va='bottom',
+                                fontsize=6, color='darkred', weight='bold',
+                                bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.7),
+                                arrowprops=dict(arrowstyle='->', color='darkred', lw=2))
+
+                    # Отмечаем вычисленную моду вертикальной линией
+                    ax.axvline(mode_value, color='red', linestyle='-', linewidth=3,
+                               label=f'Мода: {mode_value:.2f}')
+
+                    # Подписываем значение моды
+                    ax.annotate(f'Мода = {mode_value:.2f}',
+                                xy=(mode_value, modal_frequency * 0.8),
+                                xytext=(10, 0),
+                                textcoords='offset points',
+                                ha='left', va='center',
+                                fontsize=6, color='red', weight='bold',
+                                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+
+                    # Полигон частот
+                    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+                    ax.plot(bin_centers, counts, 'ro-', linewidth=2, markersize=6,
+                            label='Полигон частот', color='darkred')
+
+                    # Вертикальные линии для среднего и медианы
+                    ax.axvline(mean_clean, color='blue', linestyle='--', linewidth=2,
+                               label=f'Среднее: {mean_clean:.2f}')
+                    ax.axvline(median, color='green', linestyle='--', linewidth=2,
+                               label=f'Медиана: {median:.2f}')
 
                     # Теоретическая нормальная кривая
                     x = np.linspace(min(clean_data), max(clean_data), 100)
-                    pdf = stats.norm.pdf(x, mean_clean, std_dev_clean)
-                    ax.plot(x, pdf, 'k-', label='Нормальное распределение', linewidth=1)
+                    pdf = stats.norm.pdf(x, mean_clean, std_dev_clean) * len(clean_data) * h
+                    ax.plot(x, pdf, 'k-', label='Нормальное распределение', linewidth=2, alpha=0.7)
 
-                    ax.set_xlabel('Значение')
-                    ax.set_ylabel('Плотность вероятности')
-                    ax.set_title('Гистограмма распределения')
-                    ax.legend(fontsize=8)
+                    # Добавляем значения частот на столбцы
+                    for i, (count, patch) in enumerate(zip(counts, patches)):
+                        if count > 0:
+                            ax.text(patch.get_x() + patch.get_width() / 2, count + 0.1,
+                                    f'{int(count)}', ha='center', va='bottom',
+                                    fontsize=6, color='black', weight='bold')
+
+                    # Настройка оформления
+                    ax.set_xlabel('Значение', fontsize=5, weight='bold')
+                    ax.set_ylabel('Частота', fontsize=5, weight='bold')
+                    ax.set_title('Гистограмма распределения с выделенным модальным интервалом',
+                                 fontsize=5, weight='bold', pad=20)
+
+                    # Легенда с формулой моды
+                    from matplotlib.offsetbox import AnchoredText
+
+                    formula_text = f"Mo = L + (fₘ - fₘ₋₁)/((fₘ - fₘ₋₁) + (fₘ - fₘ₊₁)) × h\n"
+                    formula_text += f"= {L:.2f} + ({f_m}-{f_prev})/(({f_m}-{f_prev}) + ({f_m}-{f_next})) × {h:.2f}"
+                    anchored_text = AnchoredText(formula_text, loc='upper right',
+                                                 frameon=True, prop=dict(size=4))
+                    ax.add_artist(anchored_text)
+
+                    ax.legend(loc='upper left', fontsize=5)
                     ax.grid(True, alpha=0.3)
+                    ax.set_axisbelow(True)
 
-                    st.pyplot(fig, use_container_width=False)
+                    st.pyplot(fig, use_container_width=True)
+
+                    # Дополнительная информация о модальном интервале
+                    st.subheader("📋 Информация о модальном интервале")
+
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Мода", f"{mode_value:.4f}")
+                    with col2:
+                        st.metric("Модальный интервал", f"{modal_interval[0]:.2f} - {modal_interval[1]:.2f}")
+                    with col3:
+                        st.metric("Частота модального интервала", f"{modal_frequency}")
+                    with col4:
+                        st.metric("Ширина интервала", f"{h:.2f}")
+
+                    # Таблица для модального интервала и соседних
+                    st.subheader("📊 Частоты интервалов вокруг модального")
+
+                    modal_table_data = []
+                    for i in range(max(0, modal_interval_idx - 2), min(len(counts), modal_interval_idx + 3)):
+                        interval_label = f"{bin_edges[i]:.2f} - {bin_edges[i + 1]:.2f}"
+                        is_modal = "✅" if i == modal_interval_idx else ""
+                        modal_table_data.append({
+                            'Интервал': interval_label,
+                            'Частота': int(counts[i]),
+                            'Модальный': is_modal
+                        })
+
+                    modal_df = pd.DataFrame(modal_table_data)
+                    st.dataframe(modal_df, use_container_width=True)
 
                 with tab5:
                     st.header("Проверка нормальности распределения")
