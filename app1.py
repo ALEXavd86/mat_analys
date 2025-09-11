@@ -28,26 +28,6 @@ st.markdown("""
 """)
 
 
-# Функция для правильного определения моды
-def find_mode(data, tolerance=0.001):
-    """Находит моду в данных с учетом чисел с плавающей точкой"""
-    # Округляем значения для группировки
-    rounded_data = np.round(data, decimals=3)
-    counter = Counter(rounded_data)
-    max_count = max(counter.values())
-
-    # Находим все значения с максимальной частотой
-    modes = [value for value, count in counter.items() if count == max_count]
-
-    if max_count == 1:
-        return "Все значения уникальные", 1
-    elif len(modes) == 1:
-        # Находим точное значение моды в исходных данных
-        mode_value = modes[0]
-        exact_values = [x for x in data if abs(np.round(x, 3) - mode_value) < tolerance]
-        return np.mean(exact_values), max_count
-    else:
-        return f"Мультимодальное: {modes}", max_count
 
 
 # Функция для коррекции формата чисел
