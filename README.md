@@ -194,7 +194,7 @@ openpyxl>=3.1.0
 
 ## 👥 Авторы
 
-- **Ваше Имя** - [GitHub](https://github.com/yourusername)
+- **Alex Avdonin** - [GitHub](https://github.com/yourusername)
 
 ## 🙏 Благодарности
 
