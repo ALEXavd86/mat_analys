@@ -196,22 +196,5 @@ openpyxl>=3.1.0
 
 - **Alex Avdonin** - [GitHub](https://github.com/ALEXavd86)
 
-## 🙏 Благодарности
 
-- Команде Streamlit за отличный фреймворк
-- Сообществу Python за мощные библиотеки анализа данных
 
----
-
-<div align="center">
-
-### ⭐ Если проект был полезен, поставьте звезду на GitHub!
-
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/statistics-analyzer&type=Date)](https://star-history.com/#yourusername/statistics-analyzer)
-
-</div>
-
----
-
-**Версия:** 1.0.0  
-**Последнее обновление:** 2024
