@@ -152,7 +152,7 @@ def manual_fisher_f_test(sample1, sample2, alpha):
         'larger_var': larger_var,
         'smaller_var': smaller_var,
         'reject_h0': reject_h0,
-        'formula_24': f"F = {max(var1, var2):.4f} / {min(var1, var2):.4f} = {f_statistic:.4f}"
+        'formula_24': f"F = {max(var1**2, var2**2):.4f} / {min(var1**2, var2**2):.4f} = {f_statistic:.4f}"
     }
 
 
